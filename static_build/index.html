@@ -30,20 +30,51 @@
 
                             <!-- game controls -->
                             <div class="row mx-auto mb-2" style="width: 400px;">
+                                <!-- game status -->
+                                <strong class="mx-auto mb-2"><div id="status"></div></strong>
+
+                                <!-- FEN -->
+                                <div class="input-group mb-3">
+                                    <input id="fen" type="text" class="form-control">
+                                    <div class="input-group-append">
+                                        <button id="set_fen" class="btn btn-outline-success">Set FEN</button>
+                                    </div>
+                                </div>
+
+                                <!-- -buttons -->
                                 <div class="btn-group">
                                     <button id="new_game" class="btn btn-outline-secondary">New game</button>
                                     <button id="make_move" class="btn btn-outline-secondary">Make move</button>
                                     <button id="take_back" class="btn btn-outline-secondary">Take back</button>
                                     <button id="flip_board" class="btn btn-outline-secondary">Flip board</button>
                                 </div>
+
                             </div>
                         </div>
                         <div class="col">
-                            <!-- Game stats -->
-                            <strong>Status:</strong>
-                            <div id="status"></div>
-                            <div class="mt-2"><strong>FEN:</strong></div>
-                            <div id="fen"></div>
+                            <!-- game info -->
+                            <table class="table text-center">
+                                <thead>
+                                <tr>
+                                    <th>Score</th>
+                                    <th>Time (ms)</th>
+                                    <th>Nodes</th>
+                                    <th>Knps</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr>
+                                    <td><strong id="score" class="text-danger"></strong></td>
+                                    <td id="time"></td>
+                                    <td id="nodes"></td>
+                                    <td id="knps"></td>
+                                <tr>
+                                </tbody>
+                            </table>
+
+                            <hr>
+
+                            <!-- PGN output -->
                             <div class="mt-2"><strong>PGN:</strong></div>
                             <div id="pgn"></div>
                         </div>
@@ -60,12 +91,16 @@
     // make computer move
     function make_move() {
         // make HTTP POST request to make move API
-        $.post('/make_move', {'fen': game.fen()}, function (data) {
+        $.post('/make_move', {'fen': game.fen()}, function(data) {
             // load fen into the current board state
-            game.move(data.best_move, {sloppy: true})
+            game.move(data.best_move, { sloppy: true })
 
             // update board position
             board.position(game.fen());
+
+            // update game info
+            $time.text(data.time);
+            $knps.text(Math.round(Number($nodes.text()) / parseFloat($time.text())) / 1000)
 
             // update game status
             updateStatus();
@@ -73,7 +108,7 @@
     }
 
     // handle new game button click
-    $('#new_game').on('click', function () {
+    $('#new_game').on('click', function() {
         // reset board state
         game.reset();
 
@@ -82,13 +117,13 @@
     });
 
     // handle make move button click
-    $('#make_move').on('click', function () {
+    $('#make_move').on('click', function() {
         // make computer move
         make_move();
     });
 
     // handle take back button click
-    $('#take_back').on('click', function () {
+    $('#take_back').on('click', function() {
         // take move back
         game.undo();
         game.undo();
@@ -101,21 +136,51 @@
     });
 
     // handle flip board button click
-    $('#flip_board').on('click', function () {
+    $('#flip_board').on('click', function() {
         // flip board
         board.flip();
 
     });
 
+    // handle select move time option
+    $('#move_time').on('change', function() {
+        // disable fixed depth
+        $('#fixed_depth').val('0');
+    });
+
+    // handle select fixed depth option
+    $('#fixed_depth').on('change', function() {
+        // disable fixed depth
+        $('#move_time').val('0');
+    });
+
+    // handle set FEN button click
+    $('#set_fen').on('click', function() {
+        // set user FEN
+
+        // FEN parsed
+        if (game.load($('#fen').val()))
+            // set board position
+            board.position(game.fen());
+
+        // FEN is not parsed
+        else
+            alert('Illegal FEN!');
+    });
+
     // GUI board & game state variables
-    var board = null
-    var game = new Chess()
-    var $status = $('#status')
-    var $fen = $('#fen')
-    var $pgn = $('#pgn')
+    var board = null;
+    var game = new Chess();
+    var $status = $('#status');
+    var $fen = $('#fen');
+    var $pgn = $('#pgn');
+    var $score = $('#score');
+    var $time = $('#time');
+    var $nodes = $('#nodes');
+    var $knps = $('#knps')
 
     // on picking up a piece
-    function onDragStart(source, piece, position, orientation) {
+    function onDragStart (source, piece, position, orientation) {
         // do not pick up pieces if the game is over
         if (game.game_over()) return false
 
@@ -127,7 +192,7 @@
     }
 
     // on dropping piece
-    function onDrop(source, target) {
+    function onDrop (source, target) {
         // see if the move is legal
         var move = game.move({
             from: source,
@@ -147,12 +212,12 @@
 
     // update the board position after the piece snap
     // for castling, en passant, pawn promotion
-    function onSnapEnd() {
+    function onSnapEnd () {
         board.position(game.fen())
     }
 
     // update game status
-    function updateStatus() {
+    function updateStatus () {
         var status = ''
 
         var moveColor = 'White'
@@ -182,7 +247,7 @@
 
         // update DOM elements
         $status.html(status)
-        $fen.html(game.fen())
+        $fen.val(game.fen())
         $pgn.html(game.pgn())
     }
 
