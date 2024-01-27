@@ -42,6 +42,7 @@ use shakmaty::{Chess, Move, perft, Position, Role, Square, fen::Fen, CastlingMod
 #[derive(FromForm)]
 struct MakeMoveForm<'r> {
     fen: &'r str,
+    depth: i32,
 }
 
 #[get("/")]
@@ -52,16 +53,18 @@ fn index() -> content::RawHtml<&'static str> {
 #[post("/make_move", data = "<input>")]
 fn make_move(input: Form<MakeMoveForm<'_>>) -> Value {
     println!("Input FEN {}", input.fen);
+    println!("Depth {}", input.depth);
     let fen: Fen = input.fen.parse()
         .expect("Couldn't parse FEN input.");
     let mut pos: Chess = fen.into_position(CastlingMode::Standard)
         .expect("Couldn't convert FEN to chess position.");
-    let num_moves = pos.legal_moves().len();
-    println!("Num moves {}", num_moves);
+
+    let mut num_nodes: i64 = 0;
     let now = Instant::now();
-    let m = minimax::minimax(&pos, 6)
+    let m = minimax::minimax(&pos, input.depth, &mut num_nodes)
         .expect("Failed to minimax");
     let minimax_time = now.elapsed().as_millis().to_string();
+    println!("Num nodes {}", num_nodes);
     let m_san_str = San::from_move(&pos, &m).to_string();
     println!("{}", m.to_string());
     pos.play_unchecked(&m);
@@ -69,6 +72,7 @@ fn make_move(input: Form<MakeMoveForm<'_>>) -> Value {
     json!({
         "best_move": m_san_str,
         "time": minimax_time,
+        "nodes": num_nodes,
     })
 }
 

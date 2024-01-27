@@ -25,7 +25,7 @@ fn evaluate_pos(pos: &Chess) -> i32 {
     return board_value;
 }
 
-pub(crate) fn minimax(pos: &Chess, depth: i32) -> Option<Move> {
+pub(crate) fn minimax(pos: &Chess, depth: i32, num_nodes: &mut i64) -> Option<Move> {
     let moves = pos.legal_moves();
     let is_minimizing = if pos.turn() == Color::White {true} else {false};
     let mut best_move_value = if is_minimizing {i32::MAX} else {i32::MIN};
@@ -34,7 +34,7 @@ pub(crate) fn minimax(pos: &Chess, depth: i32) -> Option<Move> {
     for m in moves {
         let mut new_pos = pos.clone();
         new_pos.play_unchecked(&m);
-        let mm_value = minimax_recurse(&new_pos, depth-1, i32::MIN, i32::MAX);
+        let mm_value = minimax_recurse(&new_pos, depth-1, i32::MIN, i32::MAX, num_nodes);
         if is_minimizing {
             if mm_value <= best_move_value {
                 best_move_value = mm_value;
@@ -51,8 +51,9 @@ pub(crate) fn minimax(pos: &Chess, depth: i32) -> Option<Move> {
     return best_move;
 }
 
-fn minimax_recurse(pos: &Chess, depth: i32, mut alpha: i32, mut beta: i32) -> i32 {
+fn minimax_recurse(pos: &Chess, depth: i32, mut alpha: i32, mut beta: i32, num_nodes: &mut i64) -> i32 {
     if depth == 0 {
+        *num_nodes += 1;
         return evaluate_pos(pos);
     }
 
@@ -67,7 +68,7 @@ fn minimax_recurse(pos: &Chess, depth: i32, mut alpha: i32, mut beta: i32) -> i3
             new_pos.play_unchecked(&m);
             best_move_value = min(
                 best_move_value,
-                minimax_recurse(&new_pos, depth - 1, alpha, beta)
+                minimax_recurse(&new_pos, depth - 1, alpha, beta, num_nodes)
             );
             beta = min(beta, best_move_value);
             if beta <= alpha {
@@ -81,7 +82,7 @@ fn minimax_recurse(pos: &Chess, depth: i32, mut alpha: i32, mut beta: i32) -> i3
             new_pos.play_unchecked(&m);
             best_move_value = max(
                 best_move_value,
-                minimax_recurse(&new_pos, depth - 1, alpha, beta)
+                minimax_recurse(&new_pos, depth - 1, alpha, beta, num_nodes)
             );
             alpha = max(alpha, best_move_value);
             if beta <= alpha {
